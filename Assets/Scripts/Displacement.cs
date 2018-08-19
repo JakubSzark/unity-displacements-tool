@@ -1,138 +1,41 @@
 ﻿// Created By: Jakub P. Szarkowicz
 // Email: Jakubshark@gmail.com
 
-using System;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshCollider))]
 [RequireComponent(typeof(MeshRenderer))]
 [RequireComponent(typeof(MeshFilter))]
 
-[ExecuteInEditMode]
 [DisallowMultipleComponent]
 public class Displacement : MonoBehaviour 
 {
     [Header("Base")]
-    public int displacementSizeX = 10;
-    public int displacementSizeZ = 10;
-    [Range(1, 4)]
-    public int subDivision = 2;
+    public Vector2Int size = new Vector2Int(10, 10);
+    [Range(1, 4)] public int subDivisions = 1;
 
     [Header("Brush")]
-    [Range(1, 10)]
-    public float brushSize = 3;
-    [Range(0.01f, 1)]
-    public float brushStrength = 0.25f;
-    [Range(0, 1)]
-    public float brushFalloff = 0.1f;
-    public Direction bDir = (Direction)1;
-    public BrushType bType = 0;
+    [Range(1, 9)] public float brushSize = 3f;
+    [Range(0, 1)] public float brushStrength = 0.25f;
+    [Range(0, 1)] public float brushFalloff = 1f;
 
-    [SerializeField]
-    [HideInInspector]
-    private int instanceID = 0;
+    public Direction direction = Direction.Normal;
+    public BrushType type = BrushType.Move;
 
     [HideInInspector]
     public Vector3[] verts;
 
-    private MeshFilter filter;
-    private MeshCollider coll;
+    [SerializeField, HideInInspector]
+    private int instanceID = 0;
 
-    [Serializable]
-    public class Tex
-    {
-        public Texture2D texture;
-        public float smoothness;
-        public float metallic;
-    }
-
-    public enum Direction
-    {
-        X, Y, Z, Normal
-    }
-
-    public enum BrushType
-    {
-        Move,
-        Sculpt,
-        Smooth
-    }
-
-    [ContextMenu("Generate")]
-    public void Generate()
-    {
-        filter = GetComponent<MeshFilter>();
-        coll = GetComponent<MeshCollider>();
-
-        var m = new Mesh();
-        filter.sharedMesh = m;
-        filter.sharedMesh.name = "Displacement" + UnityEngine.Random.Range(0, 10000);
-
-        var width = displacementSizeX * subDivision;
-        var depth = displacementSizeZ * subDivision;
-
-        verts = new Vector3[(width + 1) * (depth + 1)];
-
-        var tangents = new Vector4[verts.Length];
-        var tangent = new Vector4(1f, 0f, 0f, -1f);
-        var uv = new Vector2[verts.Length];
-
-        for (int i = 0, y = 0; y <= depth; y++)
-        {
-            for (int x = 0; x <= width; x++, i++)
-            {
-                uv[i] = new Vector2((float)x / width, (float)y / depth);
-                verts[i] = new Vector3((float)(x - width / 2) / subDivision, 0, 
-                    (float)(y - depth / 2) / subDivision);
-                tangents[i] = tangent;
-            }
-        }
-
-        filter.sharedMesh.vertices = verts;
-        filter.sharedMesh.tangents = tangents;
-        filter.sharedMesh.uv = uv;
-
-        var triangles = new int[width * depth * 6];
-
-        for (int ti = 0, vi = 0, y = 0; y < depth; y++, vi++)
-        {
-            for (int x = 0; x < width; x++, ti += 6, vi++)
-            {
-                triangles[ti] = vi;
-                triangles[ti + 3] = triangles[ti + 2] = vi + 1;
-                triangles[ti + 4] = triangles[ti + 1] = vi + width + 1;
-                triangles[ti + 5] = vi + width + 2;
-            }
-        }
-
-        filter.sharedMesh.triangles = triangles;
-        filter.sharedMesh.RecalculateNormals();
-        coll.sharedMesh = filter.sharedMesh;
-    }
-
-    public void RecalculateMesh() {
-        GetComponent<MeshFilter>().sharedMesh.vertices = verts;
-    }
-
-    public void RecalculateLighting()
-    {
-        GetComponent<MeshFilter>().sharedMesh.RecalculateBounds();
-        GetComponent<MeshFilter>().sharedMesh.RecalculateTangents();
-        GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
-    }
-
-    public void RecalculateCollider()
-    {
-        GetComponent<MeshCollider>().sharedMesh = 
-            GetComponent<MeshFilter>().sharedMesh;
-    }
+    public enum Direction { X, Y, Z, Normal }
+    public enum BrushType { Move, Sculpt, Smooth }
 
     #if UNITY_EDITOR
     [ExecuteInEditMode]
     void Awake()
     {
-        if (Application.isPlaying)
-            return;
+        if (Application.isPlaying) return;
 
         if (instanceID == 0)
         {
@@ -147,4 +50,71 @@ public class Displacement : MonoBehaviour
         }
     }
     #endif
+
+    public void Generate()
+    {
+        var filter = GetComponent<MeshFilter>();
+
+        filter.sharedMesh = new Mesh
+        {
+            name = "Displacement" +
+            Random.Range(0, 10000)
+        };
+
+        var subSize = size * subDivisions;
+        verts = new Vector3[(subSize.x + 1) * (subSize.y + 1)];
+
+        var tangents = new Vector4[verts.Length];
+        var tangent = new Vector4(1f, 0f, 0f, -1f);
+        var uv = new Vector2[verts.Length];
+
+        for (int i = 0, y = 0; y <= subSize.y; y++)
+        {
+            for (int x = 0; x <= subSize.x; x++, i++)
+            {
+                uv[i] = new Vector2((float)x / subSize.x, (float)y / subSize.y);
+                verts[i] = new Vector3((float)(x - subSize.x / 2) / subDivisions, 0, 
+                    (float)(y - subSize.y / 2) / subDivisions);
+                tangents[i] = tangent;
+            }
+        }
+
+        filter.sharedMesh.vertices = verts;
+        filter.sharedMesh.tangents = tangents;
+        filter.sharedMesh.uv = uv;
+
+        var triangles = new int[subSize.x * subSize.y * 6];
+
+        for (int ti = 0, vi = 0, y = 0; y < subSize.y; y++, vi++)
+        {
+            for (int x = 0; x < subSize.x; x++, ti += 6, vi++)
+            {
+                triangles[ti] = vi;
+                triangles[ti + 3] = triangles[ti + 2] = vi + 1;
+                triangles[ti + 4] = triangles[ti + 1] = vi + subSize.x + 1;
+                triangles[ti + 5] = vi + subSize.x + 2;
+            }
+        }
+
+        filter.sharedMesh.triangles = triangles;
+        filter.sharedMesh.RecalculateNormals();
+        UpdateColliderMesh();
+    }
+
+    public void UpdateMeshVertices() {
+        GetComponent<MeshFilter>().sharedMesh.vertices = verts;
+    }
+
+    public void RecalculateLighting()
+    {
+        GetComponent<MeshFilter>().sharedMesh.RecalculateBounds();
+        GetComponent<MeshFilter>().sharedMesh.RecalculateTangents();
+        GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+    }
+
+    public void UpdateColliderMesh()
+    {
+        GetComponent<MeshCollider>().sharedMesh = 
+            GetComponent<MeshFilter>().sharedMesh;
+    }
 }

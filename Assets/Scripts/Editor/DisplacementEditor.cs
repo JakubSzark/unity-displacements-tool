@@ -3,54 +3,25 @@
 
 using UnityEditor;
 using UnityEngine;
+using System;
 
-[CustomEditor(typeof(Displacement))]
 [CanEditMultipleObjects]
+[CustomEditor(typeof(Displacement))]
 public class DisplacementEditor : Editor
 {
-    private Displacement disp;
-    private static Vector3 mousePos;
-    private RaycastHit hit;
+    private static Vector3 MousePos;
 
     private bool isPainting;
-    private Vector3 lastVector;
 
-    [MenuItem("GameObject/3D Object/Displacement", false, 0)]
-    static void CreateDisplacement()
-    {
-        var go = new GameObject("Displacement", 
-            typeof(Displacement));
-        Selection.objects = new Object[1] { go };
-    }
+    private RaycastHit hit;
+    private Displacement mainDisp;
+    private Vector3 lastVertex;
 
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
-        GUILayout.Space(10);
-
-        if (GUILayout.Button("Generate"))
-        {
-            foreach(var obj in Selection.gameObjects)
-            {
-                var d = obj.GetComponent<Displacement>();
-                if (d == null) continue;
-                d.Generate();
-            }
-        }
-
-        if (GUILayout.Button("Fix Lighting"))
-        {
-            foreach (var obj in Selection.gameObjects)
-            {
-                var d = obj.GetComponent<Displacement>();
-                if (d == null) continue;
-                d.RecalculateLighting();
-            }
-        }
-
-        if (Selection.objects.Length > 1) {
-            if (GUILayout.Button("Sew Displacements")) Sew();
-        }
+        DrawControls();
+        DrawButtons();
     }
 
     private void OnSceneGUI()
@@ -61,35 +32,66 @@ public class DisplacementEditor : Editor
         KeyboardInput();
     }
 
+    private void DrawButtons()
+    {
+        if (GUILayout.Button("Generate"))
+            LoopSelection(d => d.Generate());
+
+        if (GUILayout.Button("Fix Lighting"))
+            LoopSelection(d => d.RecalculateLighting());
+
+        if (Selection.objects.Length > 1)
+            if (GUILayout.Button("Sew Displacements")) Sew();
+    }
+
+    private void DrawControls()
+    {
+        GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
+        boxStyle.normal.textColor = Color.green;
+        boxStyle.margin = new RectOffset(20, 20, 10, 10);
+
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("Controls:\nE: Move\tR: Sculpt\tT: Smooth", boxStyle);
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+    }
+
+    private void LoopSelection(Action<Displacement> action)
+    {
+        foreach (var obj in Selection.gameObjects)
+        {
+            var d = obj.GetComponent<Displacement>();
+            if (action != null) action.Invoke(d);
+        }
+    }
+
     private void LandscapeTerrain()
     {
         if (!Tools.hidden | !isPainting) return;
 
-        foreach(var obj in Selection.gameObjects)
+        LoopSelection(d =>
         {
-            var d = obj.GetComponent<Displacement>();
-            if (d == null) continue;
-
             for (int i = 0; i < d.verts.Length; i++)
             {
                 var vertexPos = d.transform.TransformPoint(d.verts[i]);
-                var vertexDistToMouse = Vector3.Distance(mousePos, vertexPos);
-                var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - disp.brushFalloff)
-                    * disp.brushSize)) / disp.brushSize);
+                var vertexDistToMouse = Vector3.Distance(MousePos, vertexPos);
+                var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - mainDisp.brushFalloff)
+                    * mainDisp.brushSize)) / mainDisp.brushSize);
 
-                if (vertexDistToMouse > disp.brushSize) continue;
-                int dir = (int)disp.bDir;
-                Vector3 sculpt = Vector3.one * disp.brushStrength;
+                if (vertexDistToMouse > mainDisp.brushSize) continue;
+                int dir = (int)mainDisp.direction;
+                var sculpt = Vector3.one * mainDisp.brushStrength;
 
-                switch (disp.bType)
+                switch (mainDisp.type)
                 {
                     case Displacement.BrushType.Sculpt:
                         sculpt *= Event.current.shift ? -1 : 1;
                         break;
 
                     case Displacement.BrushType.Smooth:
-                        sculpt = (-d.verts[i] + lastVector)
-                            * 0.5f * disp.brushStrength;
+                        sculpt = (-d.verts[i] + lastVertex)
+                            * 0.5f * mainDisp.brushStrength;
                         break;
                 }
 
@@ -99,23 +101,23 @@ public class DisplacementEditor : Editor
                 if (dir == 3) sculpt.Scale(hit.normal);
 
                 d.verts[i] += sculpt;
-
-                lastVector = d.verts[i];
-                d.RecalculateMesh();
+                lastVertex = d.verts[i];
+                d.UpdateMeshVertices();
             }
-        }
+        });
     }
 
     private void KeyboardInput()
     {
         if (Event.current.keyCode == KeyCode.E)
-            disp.bType = Displacement.BrushType.Move;
+            mainDisp.type = Displacement.BrushType.Move;
         if (Event.current.keyCode == KeyCode.R)
-            disp.bType = Displacement.BrushType.Sculpt;
+            mainDisp.type = Displacement.BrushType.Sculpt;
         if (Event.current.keyCode == KeyCode.T)
-            disp.bType = Displacement.BrushType.Smooth;
+            mainDisp.type = Displacement.BrushType.Smooth;
+
         if (Event.current.keyCode == KeyCode.Escape)
-            Selection.objects = new Object[0];
+            Selection.objects = new UnityEngine.Object[0];
     }
 
     private void UpdateMouseInput()
@@ -124,66 +126,32 @@ public class DisplacementEditor : Editor
             Event.current.type == EventType.MouseDrag) &&
                 Event.current.button == 0;
 
-
-        if(Event.current.type == EventType.MouseUp)
-        {
-            foreach (var obj in Selection.gameObjects)
-            {
-                var d = obj.GetComponent<Displacement>();
-                if (d == null) continue;
-                d.RecalculateCollider();
-            }
-        }
+        if (Event.current.type == EventType.MouseUp)
+            LoopSelection(d => d.UpdateColliderMesh());
     }
 
     private void UpdateMousePosition()
     {
-        var active = Selection.activeGameObject;
-        if (active != null && active.GetComponent<Displacement>())
+        if (Selection.activeGameObject != null)
         {
-            disp = active.GetComponent<Displacement>();
-            var ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-            if (Physics.Raycast(ray, out hit)) mousePos = hit.point;
+            mainDisp = Selection.activeGameObject.GetComponent<Displacement>();
+            if (Physics.Raycast(HandleUtility.GUIPointToWorldRay(Event.current.mousePosition), 
+                out hit)) MousePos = hit.point;
         }
         else
         {
-            disp = null;
+            mainDisp = null;
             Tools.hidden = false;
         }
 
         if (Event.current.type == EventType.MouseMove)
             SceneView.RepaintAll();
 
-        if(disp != null)
-            Tools.hidden = disp.bType != Displacement.BrushType.Move;
+        if(mainDisp != null)
+            Tools.hidden = mainDisp.type != Displacement.BrushType.Move;
 
         if(Tools.hidden)
             HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
-    }
-
-    [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
-    private static void DrawGizmo(Displacement disp, GizmoType type)
-    {
-        if (!Tools.hidden) return;
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(mousePos, 0.1f);
-
-        if (disp == null | disp.verts == null) return;
-
-        foreach(var v in disp.verts)
-        {
-            var vertexPos = disp.transform.TransformPoint(v);
-            var vertexDistToMouse = Vector3.Distance(mousePos, vertexPos);
-            var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - disp.brushFalloff) 
-                * disp.brushSize)) / disp.brushSize);
-
-            var color = Event.current.shift ? Color.red : Color.green;
-            Gizmos.color = Color.Lerp(Color.black, color, vertexDistFalloff);
-
-            if(vertexDistToMouse < disp.brushSize)
-                Gizmos.DrawSphere(vertexPos, 0.1f);
-        }
     }
 
     private void Sew()
@@ -200,7 +168,7 @@ public class DisplacementEditor : Editor
             {
                 var w2 = d2.transform.TransformPoint(d2.verts[j]);
 
-                if(Vector3.Distance(w1, w2) <= 0.9f)
+                if (Vector3.Distance(w1, w2) <= 0.9f)
                 {
                     d1.verts[i] = d1.transform.InverseTransformPoint(w2);
                     break;
@@ -208,10 +176,45 @@ public class DisplacementEditor : Editor
             }
         }
 
-        d1.RecalculateMesh();
-        d1.RecalculateCollider();
+        d1.UpdateMeshVertices();
+        d1.UpdateColliderMesh();
 
-        d2.RecalculateMesh();
-        d2.RecalculateCollider();
+        d2.UpdateMeshVertices();
+        d2.UpdateColliderMesh();
+    }
+
+    [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
+    private static void DrawGizmo(Displacement disp, GizmoType type)
+    {
+        if (!Tools.hidden | disp.verts == null) return;
+
+        Gizmos.color = Color.black;
+        Gizmos.DrawSphere(MousePos, 0.1f);
+
+        foreach(var v in disp.verts)
+        {
+            var vertexPos = disp.transform.TransformPoint(v);
+            var vertexDistToMouse = Vector3.Distance(MousePos, vertexPos);
+            var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - disp.brushFalloff) 
+                * disp.brushSize)) / disp.brushSize);
+
+            if (vertexDistToMouse < disp.brushSize)
+            {
+                var color = Event.current.shift ? Color.red : Color.green;
+                if (disp.type == Displacement.BrushType.Smooth) color = Color.blue;
+                    Gizmos.color = Color.Lerp(Color.white, color, vertexDistFalloff);
+
+                Gizmos.DrawCube(vertexPos, Vector3.one *
+                    Mathf.Clamp(vertexDistFalloff, 0.1f, 0.2f));
+            }
+        }
+    }
+
+    [MenuItem("GameObject/3D Object/Displacement", false, 0)]
+    static void CreateDisplacement()
+    {
+        var go = new GameObject("Displacement",
+            typeof(Displacement));
+        Selection.objects = new UnityEngine.Object[1] { go };
     }
 }
