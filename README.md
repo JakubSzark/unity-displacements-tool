@@ -8,3 +8,8 @@ Then you can adjust the component and click generate.
 E - Move
 R - Sculpt
 T - Smooth
+
+
+I need help with these scripts and need to add more like a custom shader with 
+texture painting. If you have suggestions or would like to help pls email me at
+jakubshark@gmail.com. or on reddit @jakubshark
