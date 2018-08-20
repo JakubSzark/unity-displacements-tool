@@ -12,6 +12,7 @@ public class DisplacementEditor : Editor
     private static Vector3 MousePos;
 
     private bool isPainting;
+    private static bool IsSmoothing;
 
     private RaycastHit hit;
     private Displacement mainDisp;
@@ -28,7 +29,7 @@ public class DisplacementEditor : Editor
     {
         UpdateMouseInput();
         UpdateMousePosition();
-        LandscapeTerrain();
+        Landscape();
         KeyboardInput();
     }
 
@@ -52,7 +53,8 @@ public class DisplacementEditor : Editor
 
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        GUILayout.Box("Controls:\nE: Move\tR: Sculpt\tT: Smooth", boxStyle);
+        GUILayout.Box("Modes:\nE: Move\tR: Sculpt", boxStyle);
+        GUILayout.Box("Sculpt Mode:\nShift: Invert \tCtrl: Smooth", boxStyle);
         GUILayout.FlexibleSpace();
         GUILayout.EndHorizontal();
     }
@@ -66,9 +68,10 @@ public class DisplacementEditor : Editor
         }
     }
 
-    private void LandscapeTerrain()
+    private void Landscape()
     {
-        if (!Tools.hidden | !isPainting) return;
+        if (!Tools.hidden | !isPainting | mainDisp.type != (Displacement.BrushType)1)
+            return;
 
         LoopSelection(d =>
         {
@@ -82,18 +85,10 @@ public class DisplacementEditor : Editor
                 if (vertexDistToMouse > mainDisp.brushSize) continue;
                 int dir = (int)mainDisp.direction;
                 var sculpt = Vector3.one * mainDisp.brushStrength;
+                sculpt *= Event.current.shift ? -1 : 1;
 
-                switch (mainDisp.type)
-                {
-                    case Displacement.BrushType.Sculpt:
-                        sculpt *= Event.current.shift ? -1 : 1;
-                        break;
-
-                    case Displacement.BrushType.Smooth:
-                        sculpt = (-d.verts[i] + lastVertex)
-                            * 0.5f * mainDisp.brushStrength;
-                        break;
-                }
+                if(IsSmoothing)
+                    sculpt = (-d.verts[i] + lastVertex) * 0.5f * mainDisp.brushStrength;
 
                 sculpt *= vertexDistFalloff;
                 sculpt.Scale(dir == 0 ? Vector3.right : dir == 1 ?
@@ -114,10 +109,13 @@ public class DisplacementEditor : Editor
         if (Event.current.keyCode == KeyCode.R)
             mainDisp.type = Displacement.BrushType.Sculpt;
         if (Event.current.keyCode == KeyCode.T)
-            mainDisp.type = Displacement.BrushType.Smooth;
+            mainDisp.type = Displacement.BrushType.Paint;
 
         if (Event.current.keyCode == KeyCode.Escape)
             Selection.objects = new UnityEngine.Object[0];
+
+        IsSmoothing = Event.current.control & mainDisp.type ==
+            Displacement.BrushType.Sculpt;
     }
 
     private void UpdateMouseInput()
@@ -201,7 +199,7 @@ public class DisplacementEditor : Editor
             if (vertexDistToMouse < disp.brushSize)
             {
                 var color = Event.current.shift ? Color.red : Color.green;
-                if (disp.type == Displacement.BrushType.Smooth) color = Color.blue;
+                if (IsSmoothing) color = Color.blue;
                     Gizmos.color = Color.Lerp(Color.white, color, vertexDistFalloff);
 
                 Gizmos.DrawCube(vertexPos, Vector3.one *

@@ -22,14 +22,13 @@ public class Displacement : MonoBehaviour
     public Direction direction = Direction.Normal;
     public BrushType type = BrushType.Move;
 
-    [HideInInspector]
-    public Vector3[] verts;
-
+    [HideInInspector] public Vector3[] verts;
     [SerializeField, HideInInspector]
     private int instanceID = 0;
 
     public enum Direction { X, Y, Z, Normal }
-    public enum BrushType { Move, Sculpt, Smooth }
+    public enum BrushType { Move, Sculpt, Paint }
+    public enum Painting { Tex1, Tex2 }
 
     #if UNITY_EDITOR
     [ExecuteInEditMode]
