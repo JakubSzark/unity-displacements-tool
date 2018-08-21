@@ -7,31 +7,18 @@ using UnityEngine;
 [RequireComponent(typeof(MeshRenderer))]
 [RequireComponent(typeof(MeshFilter))]
 
+[ExecuteInEditMode]
 [DisallowMultipleComponent]
 public class Displacement : MonoBehaviour 
 {
-    [Header("Base")]
-    public Vector2Int size = new Vector2Int(10, 10);
-    [Range(1, 4)] public int subDivisions = 1;
-
-    [Header("Brush")]
-    [Range(1, 9)] public float brushSize = 3f;
-    [Range(0, 1)] public float brushStrength = 0.25f;
-    [Range(0, 1)] public float brushFalloff = 1f;
-
-    public Direction direction = Direction.Normal;
-    public BrushType type = BrushType.Move;
-
-    [HideInInspector] public Vector3[] verts;
+    [HideInInspector]
+    public Vector3[] verts;
     [SerializeField, HideInInspector]
     private int instanceID = 0;
-
-    public enum Direction { X, Y, Z, Normal }
-    public enum BrushType { Move, Sculpt, Paint }
-    public enum Painting { Tex1, Tex2 }
+    [SerializeField]
+    private Vector3Int ogSize;
 
     #if UNITY_EDITOR
-    [ExecuteInEditMode]
     void Awake()
     {
         if (Application.isPlaying) return;
@@ -45,13 +32,14 @@ public class Displacement : MonoBehaviour
         if (instanceID != GetInstanceID() && GetInstanceID() < 0)
         {
             instanceID = GetInstanceID();
-            Generate();
+            Generate(ogSize);
         }
     }
     #endif
 
-    public void Generate()
+    public void Generate(Vector3Int size)
     {
+        ogSize = size;
         var filter = GetComponent<MeshFilter>();
 
         filter.sharedMesh = new Mesh
@@ -60,7 +48,7 @@ public class Displacement : MonoBehaviour
             Random.Range(0, 10000)
         };
 
-        var subSize = size * subDivisions;
+        var subSize = size * size.z;
         verts = new Vector3[(subSize.x + 1) * (subSize.y + 1)];
 
         var tangents = new Vector4[verts.Length];
@@ -72,8 +60,8 @@ public class Displacement : MonoBehaviour
             for (int x = 0; x <= subSize.x; x++, i++)
             {
                 uv[i] = new Vector2((float)x / subSize.x, (float)y / subSize.y);
-                verts[i] = new Vector3((float)(x - subSize.x / 2) / subDivisions, 0, 
-                    (float)(y - subSize.y / 2) / subDivisions);
+                verts[i] = new Vector3((float)(x - subSize.x / 2) / size.z, 0, 
+                    (float)(y - subSize.y / 2) / size.z);
                 tangents[i] = tangent;
             }
         }
