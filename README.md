@@ -3,13 +3,9 @@ WIP Scripts for making source-like displacements in unity
 
 ![alt text](https://i.imgur.com/rOlc7aP.png)
 
-All you need is the stuff in the scripts folder.
-Use by right clicking in heirarchy and going to 3D Object > Displacement
-Then you can adjust the component and click generate.
-
-E - Move
-R - Sculpt
-T - Smooth
+How to Use:
+- Goto Tools>Displacement to open the window
+- Then use the window to create a displacement
 
 Selecting two displacements brings up a sew option to sew them together and filling holes.
 (Its a bit finicky)
