@@ -1,7 +1,7 @@
 # Source-Like-Displacements
 WIP Scripts for making source-like displacements in unity
 
-![alt text](https://i.imgur.com/rOlc7aP.png)
+
 
 How to Use:
 - Goto Tools>Displacement to open the window
@@ -13,3 +13,5 @@ Selecting two displacements brings up a sew option to sew them together and fill
 I need help with these scripts and need to add more like a custom shader with 
 texture painting. If you have suggestions or would like to help pls email me at
 jakubshark@gmail.com. or on reddit @jakubshark
+
+![alt text](https://i.imgur.com/rOlc7aP.png)
