@@ -4,8 +4,10 @@ using UnityEngine;
 public class DisplacementWindow : EditorWindow
 {
     private static bool IsSmoothing;
-    private static bool ShowOutline = true;
     private static bool IsSculpting;
+
+    private static bool ShowOutline = true;
+    private static bool AutoLighting = true;
 
     private static Vector3 Pos = new Vector3(0, 0, 0);
     // (X = xSize, Y = ySize, Z = Subdivisions)
@@ -20,7 +22,7 @@ public class DisplacementWindow : EditorWindow
     private static Mode CurrentMode;
     private static Direction CurrentDir;
 
-    public enum Mode { Create, Sculpt, Settings }
+    public enum Mode { Settings, Sculpt }
     public enum Direction { Normal, X, Y, Z }
 
     private void OnFocus()
@@ -90,8 +92,8 @@ public class DisplacementWindow : EditorWindow
 
     private void DrawOutline()
     {
-        if (CurrentMode != Mode.Create | Selection.gameObjects.Length > 0
-            | !ShowOutline) return;
+        if (!ShowOutline | CurrentMode == Mode.Sculpt) return;
+        if (Selection.gameObjects.Length > 1) return;
 
         Vector3[] lines = new Vector3[]
         {
@@ -118,16 +120,13 @@ public class DisplacementWindow : EditorWindow
 
         switch(CurrentMode)
         {
-            case Mode.Create:
-                ShowCreatePanel();
+            case Mode.Settings:
+                ShowSettingsPanel();
+
                 break;
 
             case Mode.Sculpt:
                 ShowSculptPanel();
-                break;
-
-            case Mode.Settings:
-                ShowSettingsPanel();
                 break;
         }
     }
@@ -137,18 +136,16 @@ public class DisplacementWindow : EditorWindow
         CenterGUI(() => GUILayout.Label("Modes", EditorStyles.boldLabel));
         CenterGUI(() =>
         {
-            if (GUILayout.Toggle(CurrentMode == Mode.Create, "Create (E)", "Button"))
-                CurrentMode = Mode.Create;
+            if (GUILayout.Toggle(CurrentMode == Mode.Settings, "Settings (E)", "Button"))
+                CurrentMode = Mode.Settings;
             if (GUILayout.Toggle(CurrentMode == Mode.Sculpt, "Sculpt (R)", "Button"))
                 CurrentMode = Mode.Sculpt;
-            if (GUILayout.Toggle(CurrentMode == Mode.Settings, "Settings (T)", "Button"))
-                CurrentMode = Mode.Settings;
         });
 
         EditorGUILayout.Space();
     }
 
-    private void ShowCreatePanel()
+    private void ShowSettingsPanel()
     {
         Pos = EditorGUILayout.Vector3Field("Position", Pos);
         var newSize = EditorGUILayout.Vector2IntField("Size", 
@@ -164,11 +161,34 @@ public class DisplacementWindow : EditorWindow
 
         CenterGUI(() =>
         {
-            if (GUILayout.Button("Create"))
+            if (GUILayout.Button("Calculate Lighting"))
+                LoopSelection(d => d.RecalculateLighting());
+
+            if (GUILayout.Button("Calculate Collider"))
+                LoopSelection(d => d.UpdateColliderMesh());
+        });
+
+        CenterGUI(() =>
+        {
+            if (GUILayout.Button("Create Displacement"))
             {
                 var d = CreateDisplacement();
                 d.Generate(Size);
             }
+
+            if (Selection.gameObjects.Length > 1)
+                if (GUILayout.Button("Sew"))
+                    Sew();
+        });
+
+        EditorGUILayout.Space();
+
+        CenterGUI(() =>
+        {
+            GUI.contentColor = Color.red;
+            if (GUILayout.Button("Reset Displacement(s)"))
+                LoopSelection(d => d.Generate(Size));
+            GUI.contentColor = Color.white;
         });
     }
 
@@ -177,22 +197,9 @@ public class DisplacementWindow : EditorWindow
         Brush.x = EditorGUILayout.Slider("Brush Size", Brush.x, 0.1f, 10);
         Brush.y = EditorGUILayout.Slider("Brush Strength", Brush.y, 0.1f, 10);
         Brush.z = EditorGUILayout.Slider("Brush Falloff", Brush.z, 0.0f, 1);
-        CurrentDir = (Direction)EditorGUILayout.EnumPopup(CurrentDir);
-    }
-
-    private void ShowSettingsPanel()
-    {
-        CenterGUI(() =>
-        {
-            if (GUILayout.Button("Reset"))
-                LoopSelection(d => d.Generate(Size));
-
-            if (GUILayout.Button("Calculate Lighting"))
-                LoopSelection(d => d.RecalculateLighting());
-
-            if (Selection.gameObjects.Length > 1)
-                if (GUILayout.Button("Sew")) Sew();
-        });
+        CurrentDir = (Direction)EditorGUILayout.EnumPopup("Brush Direction", CurrentDir);
+        EditorGUILayout.Space();
+        AutoLighting = EditorGUILayout.Toggle("Automatic Lighting", AutoLighting);
     }
 
     private void CenterGUI(System.Action action)
@@ -219,7 +226,13 @@ public class DisplacementWindow : EditorWindow
         if (Physics.Raycast(HandleUtility.GUIPointToWorldRay(Event.current.mousePosition),
             out Hit)) Mouse = Hit.point;
         if (Event.current.type == EventType.MouseUp)
-            LoopSelection(d => d.UpdateColliderMesh());
+        {
+            LoopSelection(d => 
+            {
+                d.UpdateColliderMesh();
+                if(AutoLighting) d.RecalculateLighting();
+            });
+        }
     }
 
     private void Sculpt()
@@ -303,11 +316,9 @@ public class DisplacementWindow : EditorWindow
     private void KeyboardInput()
     {
         if (Event.current.keyCode == KeyCode.E)
-            CurrentMode = Mode.Create;
+            CurrentMode = Mode.Settings;
         if (Event.current.keyCode == KeyCode.R)
             CurrentMode = Mode.Sculpt;
-        if (Event.current.keyCode == KeyCode.T)
-            CurrentMode = Mode.Settings;
         
         if (Event.current.keyCode == KeyCode.Escape)
             Selection.objects = new Object[0];
