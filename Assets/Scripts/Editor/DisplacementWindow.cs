@@ -8,6 +8,7 @@ public class DisplacementWindow : EditorWindow
 
     private static bool ShowOutline = true;
     private static bool AutoLighting = true;
+    private static bool WorldSpace = true;
 
     private static Vector3 Pos = new Vector3(0, 0, 0);
     // (X = xSize, Y = ySize, Z = Subdivisions)
@@ -58,7 +59,7 @@ public class DisplacementWindow : EditorWindow
         if (!Tools.hidden | CurrentMode != Mode.Sculpt) return;
 
         Gizmos.color = Color.black;
-        Gizmos.DrawSphere(Mouse, 0.1f);
+        Gizmos.DrawSphere(Mouse, 0.05f);
 
         foreach (var v in disp.verts)
         {
@@ -76,6 +77,20 @@ public class DisplacementWindow : EditorWindow
                 Gizmos.DrawCube(vertexPos, Vector3.one *
                 Mathf.Clamp(vertexDistFalloff, 0.1f, 0.2f));
             }
+
+            var sculpt = Vector3.one;
+            sculpt *= Event.current.shift ? -1 : 1;
+
+            int dir = (int)CurrentDir;
+            sculpt.Scale(dir == 1 ? Vector3.right : dir == 2 ?
+                Vector3.up : dir == 3 ? Vector3.forward : Vector3.one);
+            if (dir == 0) sculpt.Scale(Hit.normal);
+
+            if (!WorldSpace)
+                sculpt = disp.transform.TransformDirection(sculpt);
+
+            Gizmos.color = Color.black;
+            Gizmos.DrawRay(Mouse, sculpt);
         }
     }
 
@@ -200,6 +215,7 @@ public class DisplacementWindow : EditorWindow
         CurrentDir = (Direction)EditorGUILayout.EnumPopup("Brush Direction", CurrentDir);
         EditorGUILayout.Space();
         AutoLighting = EditorGUILayout.Toggle("Automatic Lighting", AutoLighting);
+        WorldSpace = EditorGUILayout.Toggle("World Space", WorldSpace);
     }
 
     private void CenterGUI(System.Action action)
@@ -268,8 +284,10 @@ public class DisplacementWindow : EditorWindow
                 var sculpt = Vector3.one * Brush.y;
                 sculpt *= Event.current.shift ? -1 : 1;
 
+                var vert = WorldSpace ? vertexPos : d.verts[i];
+
                 if (IsSmoothing)
-                    sculpt = (-d.verts[i] + LastVertex) * 0.5f * Brush.y;
+                    sculpt = (-vert + LastVertex) * 0.5f * Brush.y;
                 sculpt *= vertexDistFalloff;
 
                 int dir = (int)CurrentDir;
@@ -277,8 +295,11 @@ public class DisplacementWindow : EditorWindow
                     Vector3.up : dir == 3 ? Vector3.forward : Vector3.one);
                 if (dir == 0) sculpt.Scale(Hit.normal);
 
+                if (WorldSpace)
+                    sculpt = d.transform.InverseTransformDirection(sculpt);
+
                 d.verts[i] += sculpt;
-                LastVertex = d.verts[i];
+                LastVertex = WorldSpace ? vertexPos : d.verts[i];
                 d.UpdateMeshVertices();
             }
         });
