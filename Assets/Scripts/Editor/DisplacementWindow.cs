@@ -231,11 +231,14 @@ public class DisplacementWindow : EditorWindow
         IsSmoothing = Event.current.control & 
             CurrentMode == Mode.Sculpt;
 
-        if (CurrentMode == Mode.Sculpt)
+        var displacementSelected = Selection.gameObjects.Length > 0 &&
+            Selection.gameObjects[0].GetComponent<Displacement>();
+
+        if (CurrentMode == Mode.Sculpt & displacementSelected)
             HandleUtility.AddDefaultControl(GUIUtility.
                 GetControlID(FocusType.Passive));
 
-        Tools.hidden = CurrentMode == Mode.Sculpt;
+        Tools.hidden = CurrentMode == Mode.Sculpt & displacementSelected;
 
         if (!Tools.hidden | !IsSculpting) return;
 
