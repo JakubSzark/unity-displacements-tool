@@ -73,9 +73,7 @@ public class DisplacementWindow : EditorWindow
                 var color = Event.current.shift ? Color.red : Color.green;
                 if (IsSmoothing) color = Color.blue;
                 Gizmos.color = Color.Lerp(Color.white, color, vertexDistFalloff);
-
-                Gizmos.DrawCube(vertexPos, Vector3.one *
-                Mathf.Clamp(vertexDistFalloff, 0.1f, 0.2f));
+                Gizmos.DrawSphere(vertexPos, Mathf.Clamp(vertexDistFalloff, 0.1f, 0.15f));
             }
 
             var sculpt = Vector3.one;

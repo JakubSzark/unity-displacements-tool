@@ -61,7 +61,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Displacement.cs" />
-    <None Include="Assets\Shaders\SzarkWater.shader" />
     <Reference Include="UnityEditor.StandardEvents">
       <HintPath>C:/Users/Jakub/Documents/Unity/Source-Like Displacements/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
     </Reference>
