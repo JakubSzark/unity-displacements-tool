@@ -9,4 +9,4 @@ How to Use:
 
 Selecting two displacements brings up a sew option to sew them together and filling holes.
 
-![alt text](https://i.imgur.com/rOlc7aP.png)
+![alt text](https://imgur.com/bUg6u4N)
