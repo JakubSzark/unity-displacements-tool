@@ -3,25 +3,25 @@ using UnityEngine;
 
 public class DisplacementWindow : EditorWindow
 {
-    private static bool IsSmoothing;
-    private static bool IsSculpting;
+    private static bool isSmoothing;
+    private static bool isSculpting;
 
-    private static bool ShowOutline = true;
-    private static bool AutoLighting = true;
-    private static bool WorldSpace = true;
+    private static bool showOutline = true;
+    private static bool autoLighting = true;
+    private static bool worldSpace = true;
 
-    private static Vector3 Pos = new Vector3(0, 0, 0);
+    private static Vector3 pos = new Vector3(0, 0, 0);
     // (X = xSize, Y = ySize, Z = Subdivisions)
-    private static Vector3Int Size = new Vector3Int(10, 10, 1);
+    private static Vector3Int size = new Vector3Int(10, 10, 1);
     // (X = Size, Y = Strength, Z = Falloff)
-    private static Vector3 Brush = new Vector3(3, 0.25f, 1.0f);
+    private static Vector3 brush = new Vector3(3, 0.25f, 1.0f);
 
-    private static Vector3 Mouse;
-    private static Vector3 LastVertex;
-    private static RaycastHit Hit;
+    private static Vector3 mouse;
+    private static Vector3 lastVertex;
+    private static RaycastHit hit;
 
-    private static Mode CurrentMode;
-    private static Direction CurrentDir;
+    private static Mode currentMode;
+    private static Direction currentDir;
 
     public enum Mode { Settings, Sculpt }
     public enum Direction { Normal, X, Y, Z }
@@ -49,29 +49,29 @@ public class DisplacementWindow : EditorWindow
         go.GetComponent<MeshRenderer>().sharedMaterial =
             new Material(Shader.Find("Standard"));
         Selection.objects = new Object[1] { go };
-        go.transform.position = Pos;
+        go.transform.position = pos;
         return go.GetComponent<Displacement>();
     }
 
     [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
     private static void DrawGizmo(Displacement disp, GizmoType type)
     {
-        if (!Tools.hidden | CurrentMode != Mode.Sculpt) return;
+        if (!Tools.hidden | currentMode != Mode.Sculpt) return;
 
         Gizmos.color = Color.black;
-        Gizmos.DrawSphere(Mouse, 0.05f);
+        Gizmos.DrawSphere(mouse, 0.05f);
 
         foreach (var v in disp.verts)
         {
             var vertexPos = disp.transform.TransformPoint(v);
-            var vertexDistToMouse = Vector3.Distance(Mouse, vertexPos);
-            var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - Brush.z) 
-                * Brush.x)) / Brush.x);
+            var vertexDistToMouse = Vector3.Distance(mouse, vertexPos);
+            var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - brush.z) 
+                * brush.x)) / brush.x);
 
-            if (vertexDistToMouse < Brush.x)
+            if (vertexDistToMouse < brush.x)
             {
                 var color = Event.current.shift ? Color.red : Color.green;
-                if (IsSmoothing) color = Color.blue;
+                if (isSmoothing) color = Color.blue;
                 Gizmos.color = Color.Lerp(Color.white, color, vertexDistFalloff);
                 Gizmos.DrawSphere(vertexPos, Mathf.Clamp(vertexDistFalloff, 0.1f, 0.15f));
             }
@@ -79,16 +79,16 @@ public class DisplacementWindow : EditorWindow
             var sculpt = Vector3.one;
             sculpt *= Event.current.shift ? -1 : 1;
 
-            int dir = (int)CurrentDir;
+            int dir = (int)currentDir;
             sculpt.Scale(dir == 1 ? Vector3.right : dir == 2 ?
                 Vector3.up : dir == 3 ? Vector3.forward : Vector3.one);
-            if (dir == 0) sculpt.Scale(Hit.normal);
+            if (dir == 0) sculpt.Scale(hit.normal);
 
-            if (!WorldSpace)
+            if (!worldSpace)
                 sculpt = disp.transform.TransformDirection(sculpt);
 
             Gizmos.color = Color.black;
-            Gizmos.DrawRay(Mouse, sculpt);
+            Gizmos.DrawRay(mouse, sculpt);
         }
     }
 
@@ -105,23 +105,23 @@ public class DisplacementWindow : EditorWindow
 
     private void DrawOutline()
     {
-        if (!ShowOutline | CurrentMode == Mode.Sculpt) return;
+        if (!showOutline | currentMode == Mode.Sculpt) return;
         if (Selection.gameObjects.Length > 1) return;
 
         Vector3[] lines = new Vector3[]
         {
-            new Vector3(Size.x / 2, 0, Size.y / 2),
-            new Vector3(-Size.x / 2, 0, Size.y / 2),
-            new Vector3(Size.x / 2, 0, -Size.y / 2),
-            new Vector3(-Size.x / 2, 0, -Size.y / 2),
-            new Vector3(Size.x / 2, 0, -Size.y / 2),
-            new Vector3(Size.x / 2, 0, Size.y / 2),
-            new Vector3(-Size.x / 2, 0, -Size.y / 2),
-            new Vector3(-Size.x / 2, 0, Size.y / 2)
+            new Vector3(size.x / 2, 0, size.y / 2),
+            new Vector3(-size.x / 2, 0, size.y / 2),
+            new Vector3(size.x / 2, 0, -size.y / 2),
+            new Vector3(-size.x / 2, 0, -size.y / 2),
+            new Vector3(size.x / 2, 0, -size.y / 2),
+            new Vector3(size.x / 2, 0, size.y / 2),
+            new Vector3(-size.x / 2, 0, -size.y / 2),
+            new Vector3(-size.x / 2, 0, size.y / 2)
         };
 
         for(int i = 0; i < lines.Length; i++)
-            lines[i] += Pos;
+            lines[i] += pos;
 
         Handles.color = Color.red;
         Handles.DrawLines(lines);
@@ -131,7 +131,7 @@ public class DisplacementWindow : EditorWindow
     {
         ShowTopBar();
 
-        switch(CurrentMode)
+        switch(currentMode)
         {
             case Mode.Settings:
                 ShowSettingsPanel();
@@ -149,10 +149,10 @@ public class DisplacementWindow : EditorWindow
         CenterGUI(() => GUILayout.Label("Modes", EditorStyles.boldLabel));
         CenterGUI(() =>
         {
-            if (GUILayout.Toggle(CurrentMode == Mode.Settings, "Settings (E)", "Button"))
-                CurrentMode = Mode.Settings;
-            if (GUILayout.Toggle(CurrentMode == Mode.Sculpt, "Sculpt (R)", "Button"))
-                CurrentMode = Mode.Sculpt;
+            if (GUILayout.Toggle(currentMode == Mode.Settings, "Settings (E)", "Button"))
+                currentMode = Mode.Settings;
+            if (GUILayout.Toggle(currentMode == Mode.Sculpt, "Sculpt (R)", "Button"))
+                currentMode = Mode.Sculpt;
         });
 
         EditorGUILayout.Space();
@@ -160,16 +160,16 @@ public class DisplacementWindow : EditorWindow
 
     private void ShowSettingsPanel()
     {
-        Pos = EditorGUILayout.Vector3Field("Position", Pos);
+        pos = EditorGUILayout.Vector3Field("Position", pos);
         var newSize = EditorGUILayout.Vector2IntField("Size", 
-            new Vector2Int(Size.x, Size.y));
-        Size = new Vector3Int(newSize.x, newSize.y, Size.z);
+            new Vector2Int(size.x, size.y));
+        size = new Vector3Int(newSize.x, newSize.y, size.z);
 
-        if (Size.x <= 0) Size.x = 1;
-        if (Size.y <= 0) Size.y = 1;
+        if (size.x <= 0) size.x = 1;
+        if (size.y <= 0) size.y = 1;
 
-        Size.z = EditorGUILayout.IntSlider("Subdivisions", Size.z, 1, 4);
-        ShowOutline = EditorGUILayout.Toggle("Show Outline", ShowOutline);
+        size.z = EditorGUILayout.IntSlider("Subdivisions", size.z, 1, 4);
+        showOutline = EditorGUILayout.Toggle("Show Outline", showOutline);
         EditorGUILayout.Space();
 
         CenterGUI(() =>
@@ -186,7 +186,7 @@ public class DisplacementWindow : EditorWindow
             if (GUILayout.Button("Create Displacement"))
             {
                 var d = CreateDisplacement();
-                d.Generate(Size);
+                d.Generate(size);
             }
 
             if (Selection.gameObjects.Length > 1)
@@ -200,20 +200,20 @@ public class DisplacementWindow : EditorWindow
         {
             GUI.contentColor = Color.red;
             if (GUILayout.Button("Reset Displacement(s)"))
-                LoopSelection(d => d.Generate(Size));
+                LoopSelection(d => d.Generate(size));
             GUI.contentColor = Color.white;
         });
     }
 
     private void ShowSculptPanel()
     {
-        Brush.x = EditorGUILayout.Slider("Brush Size", Brush.x, 0.1f, 10);
-        Brush.y = EditorGUILayout.Slider("Brush Strength", Brush.y, 0.1f, 10);
-        Brush.z = EditorGUILayout.Slider("Brush Falloff", Brush.z, 0.0f, 1);
-        CurrentDir = (Direction)EditorGUILayout.EnumPopup("Brush Direction", CurrentDir);
+        brush.x = EditorGUILayout.Slider("Brush Size", brush.x, 0.1f, 10);
+        brush.y = EditorGUILayout.Slider("Brush Strength", brush.y, 0.1f, 10);
+        brush.z = EditorGUILayout.Slider("Brush Falloff", brush.z, 0.0f, 1);
+        currentDir = (Direction)EditorGUILayout.EnumPopup("Brush Direction", currentDir);
         EditorGUILayout.Space();
-        AutoLighting = EditorGUILayout.Toggle("Automatic Lighting", AutoLighting);
-        WorldSpace = EditorGUILayout.Toggle("World Space", WorldSpace);
+        autoLighting = EditorGUILayout.Toggle("Automatic Lighting", autoLighting);
+        worldSpace = EditorGUILayout.Toggle("World Space", worldSpace);
     }
 
     private void CenterGUI(System.Action action)
@@ -238,66 +238,66 @@ public class DisplacementWindow : EditorWindow
     private void GetMouseInput()
     {
         if (Physics.Raycast(HandleUtility.GUIPointToWorldRay(Event.current.mousePosition),
-            out Hit)) Mouse = Hit.point;
+            out hit)) mouse = hit.point;
         if (Event.current.type == EventType.MouseUp)
         {
             LoopSelection(d => 
             {
                 d.UpdateColliderMesh();
-                if(AutoLighting) d.RecalculateLighting();
+                if(autoLighting) d.RecalculateLighting();
             });
         }
     }
 
     private void Sculpt()
     {
-        IsSculpting = (Event.current.type == EventType.MouseDown |
+        isSculpting = (Event.current.type == EventType.MouseDown |
             Event.current.type == EventType.MouseDrag) &&
                 Event.current.button == 0;
 
-        IsSmoothing = Event.current.control & 
-            CurrentMode == Mode.Sculpt;
+        isSmoothing = Event.current.control & 
+            currentMode == Mode.Sculpt;
 
         var displacementSelected = Selection.gameObjects.Length > 0 &&
             Selection.gameObjects[0].GetComponent<Displacement>();
 
-        if (CurrentMode == Mode.Sculpt & displacementSelected)
+        if (currentMode == Mode.Sculpt & displacementSelected)
             HandleUtility.AddDefaultControl(GUIUtility.
                 GetControlID(FocusType.Passive));
 
-        Tools.hidden = CurrentMode == Mode.Sculpt & displacementSelected;
+        Tools.hidden = currentMode == Mode.Sculpt & displacementSelected;
 
-        if (!Tools.hidden | !IsSculpting) return;
+        if (!Tools.hidden | !isSculpting) return;
 
         LoopSelection(d =>
         {
             for (int i = 0; i < d.verts.Length; i++)
             {
                 var vertexPos = d.transform.TransformPoint(d.verts[i]);
-                var vertexDistToMouse = Vector3.Distance(Mouse, vertexPos);
-                var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - Brush.z)
-                    * Brush.x)) / Brush.x);
+                var vertexDistToMouse = Vector3.Distance(mouse, vertexPos);
+                var vertexDistFalloff = 1 - ((vertexDistToMouse - ((1 - brush.z)
+                    * brush.x)) / brush.x);
 
-                if (vertexDistToMouse > Brush.x) continue;
-                var sculpt = Vector3.one * Brush.y;
+                if (vertexDistToMouse > brush.x) continue;
+                var sculpt = Vector3.one * brush.y;
                 sculpt *= Event.current.shift ? -1 : 1;
 
-                var vert = WorldSpace ? vertexPos : d.verts[i];
+                var vert = worldSpace ? vertexPos : d.verts[i];
 
-                if (IsSmoothing)
-                    sculpt = (-vert + LastVertex) * 0.5f * Brush.y;
+                if (isSmoothing)
+                    sculpt = (-vert + lastVertex) * 0.5f * brush.y;
                 sculpt *= vertexDistFalloff;
 
-                int dir = (int)CurrentDir;
+                int dir = (int)currentDir;
                 sculpt.Scale(dir == 1 ? Vector3.right : dir == 2 ?
                     Vector3.up : dir == 3 ? Vector3.forward : Vector3.one);
-                if (dir == 0) sculpt.Scale(Hit.normal);
+                if (dir == 0) sculpt.Scale(hit.normal);
 
-                if (WorldSpace)
+                if (worldSpace)
                     sculpt = d.transform.InverseTransformDirection(sculpt);
 
                 d.verts[i] += sculpt;
-                LastVertex = WorldSpace ? vertexPos : d.verts[i];
+                lastVertex = worldSpace ? vertexPos : d.verts[i];
                 d.UpdateMeshVertices();
             }
         });
@@ -335,9 +335,9 @@ public class DisplacementWindow : EditorWindow
     private void KeyboardInput()
     {
         if (Event.current.keyCode == KeyCode.E)
-            CurrentMode = Mode.Settings;
+            currentMode = Mode.Settings;
         if (Event.current.keyCode == KeyCode.R)
-            CurrentMode = Mode.Sculpt;
+            currentMode = Mode.Sculpt;
         
         if (Event.current.keyCode == KeyCode.Escape)
             Selection.objects = new Object[0];
