@@ -1,10 +1,20 @@
-# Source-Like-Displacements
-WIP Scripts for making source-like displacements in unity
+# How to Use
+- Open window under Tools>Szark's Tools>Displacements Toolbar
 
+# Sculpting
+- Switch to sculpt mode
+- Hold Left Mouse Button to Sculpt
+- Hold Shift to Lower
+- Hold Control to Smooth
 
+# Settings
+- Sew
+- Auto Lighting
+- Refresh
+- Reset
 
-How to Use:
-- Goto Tools>Displacement to open the window
-- Then use the window to create a displacement
-
-Selecting two or more displacements brings up a sew option to sew them together and filling holes.
+# Examples
+<img src="https://i.imgur.com/LVHBTMl.gif" width="800">
+<img src="https://i.imgur.com/y0TKzJk.gif" width="800">
+<img src="https://i.imgur.com/PcoGrqI.gif" width="800">
+<img src="https://i.imgur.com/3dX3PGD.gif" width="800">
