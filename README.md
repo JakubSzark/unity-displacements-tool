@@ -1,4 +1,6 @@
 # How to Use
+- Download the latest release: https://github.com/jakubshark/Unity-Displacements/releases
+- Double click the Unity Package to import into your unity project
 - Open window under Tools>Szark's Tools>Displacements Toolbar
 
 # Sculpting
