@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Example New/New Displacements.unity
+- path: Assets/Example/Displacement Example.unity
   isLoaded: 1
   isActive: 1
