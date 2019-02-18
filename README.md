@@ -13,7 +13,7 @@
 - Refresh
 - Reset
 
-# Examples
+# Gifs!
 <img src="https://i.imgur.com/LVHBTMl.gif" width="800">
 <img src="https://i.imgur.com/y0TKzJk.gif" width="800">
 <img src="https://i.imgur.com/f2axMdB.gif" width="800">
