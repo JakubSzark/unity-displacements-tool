@@ -60,9 +60,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Editor\DisplacementToolbar.cs" />
-    <Compile Include="Assets\Scripts\Editor\DisplacementTools.cs" />
-    <Compile Include="Assets\Scripts\Editor\NewDisplacementWindow.cs" />
+    <Compile Include="Assets\Displacements\Scripts\Editor\DisplacementToolbar.cs" />
+    <Compile Include="Assets\Displacements\Scripts\Editor\DisplacementTools.cs" />
+    <Compile Include="Assets\Displacements\Scripts\Editor\NewDisplacementWindow.cs" />
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>C:/Users/Jakub/Documents/GitHub/Unity-Displacements/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
     </Reference>
