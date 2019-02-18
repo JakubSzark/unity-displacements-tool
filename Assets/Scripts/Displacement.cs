@@ -1,7 +1,4 @@
-﻿// Created By: Jakub P. Szarkowicz
-// Email: Jakubshark@gmail.com
-
-using UnityEngine;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(MeshCollider))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -11,62 +8,53 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class Displacement : MonoBehaviour 
 {
-    [HideInInspector]
-    public Vector3[] verts;
+    public Vector3[] Vertices { get; set; }
+
+    public MeshFilter filter;
+    private MeshCollider coll;
+
     [SerializeField, HideInInspector]
-    private int instanceID = 0;
-    [SerializeField]
-    private Vector3Int ogSize;
+    private Vector3Int data;
 
-    #if UNITY_EDITOR
-    void Awake()
+    private void OnEnable()
     {
-        if (Application.isPlaying) return;
+        filter = GetComponent<MeshFilter>();
+        coll = GetComponent<MeshCollider>();
+    }
 
-        if (instanceID == 0)
+    private void Update()
+    {
+        if (Vertices == null)
         {
-            instanceID = GetInstanceID();
-            return;
-        }
-
-        if (instanceID != GetInstanceID() && GetInstanceID() < 0)
-        {
-            instanceID = GetInstanceID();
-            Generate(ogSize);
+            filter.sharedMesh = Instantiate(filter.sharedMesh);
+            Vertices = filter.sharedMesh.vertices;
+            UpdateColliderMesh();
         }
     }
-    #endif
 
-    public void Generate(Vector3Int size)
+    public void Generate(int xSize, int zSize, int subDivisions)
     {
-        ogSize = size;
-        var filter = GetComponent<MeshFilter>();
+        filter.sharedMesh = new Mesh() { name = $"Displacement" };
+        data = new Vector3Int(xSize, zSize, subDivisions);
+        var subSize = new Vector2Int(xSize, zSize) * subDivisions;
+        Vertices = new Vector3[(subSize.x + 1) * (subSize.y + 1)];
 
-        filter.sharedMesh = new Mesh
-        {
-            name = "Displacement" +
-            Random.Range(0, 10000)
-        };
-
-        var subSize = size * size.z;
-        verts = new Vector3[(subSize.x + 1) * (subSize.y + 1)];
-
-        var tangents = new Vector4[verts.Length];
         var tangent = new Vector4(1f, 0f, 0f, -1f);
-        var uv = new Vector2[verts.Length];
+        var tangents = new Vector4[Vertices.Length];
+        var uv = new Vector2[Vertices.Length];
 
         for (int i = 0, y = 0; y <= subSize.y; y++)
         {
             for (int x = 0; x <= subSize.x; x++, i++)
             {
-                uv[i] = new Vector2((float)x / subSize.x, (float)y / subSize.y);
-                verts[i] = new Vector3((float)(x - subSize.x / 2) / size.z, 0, 
-                    (float)(y - subSize.y / 2) / size.z);
                 tangents[i] = tangent;
+                uv[i] = new Vector2((float)x / subSize.x, (float)y / subSize.y);
+                Vertices[i] = new Vector3((x - subSize.x * 0.5f) / subDivisions, 
+                    0, (y - subSize.y * 0.5f) / subDivisions);
             }
         }
 
-        filter.sharedMesh.vertices = verts;
+        filter.sharedMesh.vertices = Vertices;
         filter.sharedMesh.tangents = tangents;
         filter.sharedMesh.uv = uv;
 
@@ -84,24 +72,25 @@ public class Displacement : MonoBehaviour
         }
 
         filter.sharedMesh.triangles = triangles;
-        filter.sharedMesh.RecalculateNormals();
+
+        RecalculateLighting();
         UpdateColliderMesh();
     }
 
-    public void UpdateMeshVertices() {
-        GetComponent<MeshFilter>().sharedMesh.vertices = verts;
-    }
+    public void UpdateMeshVertices() =>
+        filter.sharedMesh.vertices = Vertices;
+
+    public void UpdateColliderMesh() =>
+        coll.sharedMesh = filter.sharedMesh;
 
     public void RecalculateLighting()
     {
-        GetComponent<MeshFilter>().sharedMesh.RecalculateBounds();
-        GetComponent<MeshFilter>().sharedMesh.RecalculateTangents();
-        GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+        filter.sharedMesh.RecalculateBounds();
+        filter.sharedMesh.RecalculateTangents();
+        filter.sharedMesh.RecalculateNormals();
     }
 
-    public void UpdateColliderMesh()
-    {
-        GetComponent<MeshCollider>().sharedMesh = 
-            GetComponent<MeshFilter>().sharedMesh;
+    public void ResetToOriginal() {
+        Generate(data.x, data.y, data.z);
     }
 }
